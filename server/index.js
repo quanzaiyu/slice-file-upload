@@ -73,7 +73,8 @@ async function handleVerify(req, res) {
     // 文件切片部分上传或未上传
     res.end(
       JSON.stringify({
-        shouldUpload: true
+        shouldUpload: true,
+        uploadedList: await createUploadedList(fileHash)
       })
     );
   }

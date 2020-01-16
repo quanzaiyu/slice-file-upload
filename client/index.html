@@ -53,7 +53,7 @@
   
           // shouldUpload: 验证文件是否需要上传
           // uploadedList: 获取服务器端已存在的分片文件，只有在需要上传时（shouldUpload为true）才出现
-          const { shouldUpload } = await this.verifyUpload(
+          const { shouldUpload, uploadedList } = await this.verifyUpload(
             this.container.filename,
             this.container.hash
           );
@@ -71,7 +71,7 @@
             index,
           }));
 
-          await this.uploadChunks();
+          await this.uploadChunks(uploadedList);
         },
         // 生成文件切片
         createFileChunk(file) {
@@ -84,8 +84,9 @@
           return fileChunkList;
         },
         // 上传切片
-        async uploadChunks() {
+        async uploadChunks(uploadedList = []) {
           const requestList = this.data
+            .filter(({chunkhash}) => !uploadedList.includes(chunkhash))
             .map(async ({ chunk, chunkhash, filehash, filename, index }) => {
               const formData = new FormData();
               formData.append("chunk", chunk);
@@ -98,7 +99,6 @@
                 data: formData
               })
             })
-
           await Promise.all(requestList);
         },
         // 生成文件hash（web-worker）
