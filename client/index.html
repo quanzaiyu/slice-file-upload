@@ -50,6 +50,17 @@
 
           // 计算文件hash
           this.container.hash = await this.calculateHash(fileChunkList);
+  
+          // shouldUpload: 验证文件是否需要上传
+          // uploadedList: 获取服务器端已存在的分片文件，只有在需要上传时（shouldUpload为true）才出现
+          const { shouldUpload } = await this.verifyUpload(
+            this.container.filename,
+            this.container.hash
+          );
+          if (!shouldUpload) {
+            alert("文件秒传成功");
+            return;
+          }
 
           // 装入切片数据
           this.data = fileChunkList.map(({ file }, index) => ({
@@ -103,6 +114,20 @@
               }
             };
           });
+        },
+        // 验证文件是否需要上传
+        async verifyUpload(filename, fileHash) {
+          const { data } = await this.request({
+            url: "http://localhost:3000/verify",
+            headers: {
+              "content-type": "application/json"
+            },
+            data: JSON.stringify({
+              filename,
+              fileHash
+            })
+          });
+          return JSON.parse(data);
         },
         // 简单的请求封装
         request({url, method = 'POST', data, headers = {}}) {

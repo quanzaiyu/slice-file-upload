@@ -11,6 +11,12 @@ const server = http.createServer()
 const extractExt = filename =>
   filename.slice(filename.lastIndexOf("."), filename.length); // 提取后缀名
 
+// 返回已经上传切片名
+const createUploadedList = async fileHash =>
+  fse.existsSync(`${UPLOAD_DIR}/${fileHash}`)
+    ? await fse.readdir(`${UPLOAD_DIR}/${fileHash}`)
+    : [];
+
 // 处理POST请求
 const resolvePost = req =>
   new Promise(resolve => {
@@ -36,7 +42,12 @@ server.on('request', async (req, res) => {
     res.end()
     return
   }
-
+  
+  // 验证文件是否需要上传
+  if (req.url === "/verify") {
+    await handleVerify(req, res)
+  }
+  
   // 上传操作
   if (req.url === '/upload') {
     await handleUpload(req, res)
@@ -44,6 +55,29 @@ server.on('request', async (req, res) => {
 })
 
 server.listen(3000, () => console.log('服务端已启动 http://localhost:3000'))
+
+// 验证的处理
+async function handleVerify(req, res) {
+  const data = await resolvePost(req);
+  const { fileHash, filename } = data;
+  const ext = extractExt(filename);
+  const filePath = `${UPLOAD_DIR}/${fileHash}${ext}`;
+  if (fse.existsSync(filePath)) {
+    // 文件已上传并已经合并，不需要上传
+    res.end(
+      JSON.stringify({
+        shouldUpload: false
+      })
+    );
+  } else {
+    // 文件切片部分上传或未上传
+    res.end(
+      JSON.stringify({
+        shouldUpload: true
+      })
+    );
+  }
+}
 
 // 上传操作
 async function handleUpload(req, res) {
