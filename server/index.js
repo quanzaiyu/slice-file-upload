@@ -122,9 +122,11 @@ async function applyMerge(fields) {
   const [length] = fields.length
   const chunkDir = `${UPLOAD_DIR}/${filehash}`;
   
-  let chunkPaths = fse.readdirSync(chunkDir);
-  if (chunkPaths.length === Number(length)) {
-    await handleMerge(fields)
+  if (fse.existsSync(chunkDir)) {
+    let chunkPaths = fse.readdirSync(chunkDir);
+    if (chunkPaths.length === Number(length)) {
+      await handleMerge(fields)
+    }
   }
 }
 
