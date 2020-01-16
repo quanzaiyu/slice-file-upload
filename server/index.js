@@ -41,11 +41,6 @@ server.on('request', async (req, res) => {
   if (req.url === '/upload') {
     await handleUpload(req, res)
   }
-
-  // 合并切片文件
-  if (req.url === "/merge") {
-    await handleMerge(req, res)
-  }
 })
 
 server.listen(3000, () => console.log('服务端已启动 http://localhost:3000'))
@@ -66,11 +61,12 @@ async function handleUpload(req, res) {
     const [chunkhash] = fields.chunkhash;
     const filePath = `${UPLOAD_DIR}/${filehash}/${chunkhash}`;
     const chunkDir = `${UPLOAD_DIR}/${filehash}`;
-
+  
     // 文件已存在
     if (fse.existsSync(`${filePath}`)) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8')
       res.end("切片已存在，不需要重复上传");
+      await applyMerge(fields)
       return
     }
 
@@ -79,16 +75,31 @@ async function handleUpload(req, res) {
     }
 
     await fse.move(chunk.path, `${filePath}`);
+    
+    await applyMerge(fields)
+    
     res.end("接收文件成功");
   });
 }
 
-// 合并的处理
-async function handleMerge(req, res) {
-  const data = await resolvePost(req);
-  const { filehash, filename } = data;
-  const ext = extractExt(filename);
+async function applyMerge(fields) {
+  const [filehash] = fields.filehash;
+  const [length] = fields.length
+  const chunkDir = `${UPLOAD_DIR}/${filehash}`;
+  
+  let chunkPaths = fse.readdirSync(chunkDir);
+  if (chunkPaths.length === Number(length)) {
+    await handleMerge(fields)
+  }
+}
 
+// 合并的处理
+async function handleMerge(fields) {
+  const [filehash] = fields.filehash;
+  const [filename] = fields.filename;
+  
+  const ext = extractExt(filename);
+  
   const filePath = `${UPLOAD_DIR}/${filehash}${ext}`;
   const chunkDir = `${UPLOAD_DIR}/${filehash}`;
   let chunkPaths = fse.readdirSync(chunkDir);
@@ -106,11 +117,4 @@ async function handleMerge(req, res) {
     fse.unlinkSync(`${chunkDir}/${chunkPath}`); // 删除文件
   });
   fse.rmdirSync(chunkDir); // 合并后删除保存切片的目录
-
-  res.end(
-    JSON.stringify({
-      code: 0,
-      message: "文件合并成功"
-    })
-  );
 }
