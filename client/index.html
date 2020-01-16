@@ -25,6 +25,8 @@
             file: null, // 需要上传的文件
             filename: '', // 文件名
             length: 1, // 切片数
+            hash: '', // 文件hash
+            worker: null,
           },
           data: [], // 切片数据
         }
@@ -33,6 +35,9 @@
         handleFileChange(e) {
           const [file] = e.target.files // 取出文件列表的第一个
           this.container.file = file
+          if (!this.container.file) {
+            return
+          }
           this.container.filename = file.name
           this.container.length = Math.ceil(this.container.file.size / this.sliceSize) // 每1MB一份
         },
@@ -43,10 +48,14 @@
           }
           const fileChunkList = this.createFileChunk(this.container.file);
 
+          // 计算文件hash
+          this.container.hash = await this.calculateHash(fileChunkList);
+
           // 装入切片数据
           this.data = fileChunkList.map(({ file }, index) => ({
             filename: this.container.filename,
-            chunkName: this.container.filename + "-" + index, // 切片文件hash
+            filehash: this.container.hash, // 文件hash
+            chunkhash: this.container.hash + "-" + index, // 切片文件hash
             chunk: file,
             index,
           }));
@@ -66,10 +75,11 @@
         // 上传切片
         async uploadChunks() {
           const requestList = this.data
-            .map(async ({ chunk, chunkName, index }) => {
+            .map(async ({ chunk, chunkhash, filehash, filename, index }) => {
               const formData = new FormData();
               formData.append("chunk", chunk);
-              formData.append("chunkName", chunkName);
+              formData.append("chunkhash", chunkhash);
+              formData.append("filehash", filehash);
               formData.append("filename", this.container.filename);
               this.request({
                 url: "http://localhost:3000/upload",
@@ -77,6 +87,20 @@
               })
             })
           await Promise.all(requestList);
+        },
+        // 生成文件hash（web-worker）
+        calculateHash(fileChunkList) {
+          return new Promise(resolve => {
+            this.container.worker = new Worker("./hash-web-worker.js");
+            this.container.worker.postMessage({ fileChunkList });
+            this.container.worker.onmessage = e => {
+              const { percentage, hash } = e.data;
+              this.hashPercentage = percentage;
+              if (hash) {
+                resolve(hash);
+              }
+            };
+          });
         },
         // 简单的请求封装
         request({url, method = 'POST', data, headers = {}}) {

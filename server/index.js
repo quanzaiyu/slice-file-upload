@@ -38,10 +38,10 @@ async function handleUpload(req, res) {
     }
 
     const [chunk] = files.chunk;
-    const [chunkName] = fields.chunkName;
-    const [filename] = fields.filename;
-    const filePath = `${UPLOAD_DIR}/${filename}-tmp/${chunkName}`;
-    const chunkDir = `${UPLOAD_DIR}/${filename}-tmp`;
+    const [filehash] = fields.filehash;
+    const [chunkhash] = fields.chunkhash;
+    const filePath = `${UPLOAD_DIR}/${filehash}/${chunkhash}`;
+    const chunkDir = `${UPLOAD_DIR}/${filehash}`;
 
     // 文件已存在
     if (fse.existsSync(`${filePath}`)) {
