@@ -32,8 +32,6 @@ async function handleUpload(req, res) {
   const multipart = new multiparty.Form();
 
   multipart.parse(req, async (err, fields, files) => {
-    console.log({err, fields, files})
-
     if (err) {
       res.status = 500;
       res.end(`接受文件失败: ${err}`);
