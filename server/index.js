@@ -28,7 +28,6 @@ server.on('request', async (req, res) => {
 server.listen(3000, () => console.log('服务端已启动 http://localhost:3000'))
 
 async function handleUpload(req, res) {
-
   const multipart = new multiparty.Form();
 
   multipart.parse(req, async (err, fields, files) => {
@@ -38,16 +37,24 @@ async function handleUpload(req, res) {
       return;
     }
 
-    const [file] = files.file;
+    const [chunk] = files.chunk;
+    const [chunkName] = fields.chunkName;
     const [filename] = fields.filename;
-    const fileDir = `${UPLOAD_DIR}/${filename}`;
-    const filePath = `${UPLOAD_DIR}/${filename}/${filename}`;
+    const filePath = `${UPLOAD_DIR}/${filename}-tmp/${chunkName}`;
+    const chunkDir = `${UPLOAD_DIR}/${filename}-tmp`;
 
-    if (!fse.existsSync(fileDir)) {
-      await fse.mkdirs(fileDir);
+    // 文件已存在
+    if (fse.existsSync(`${filePath}`)) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8')
+      res.end("切片已存在，不需要重复上传");
+      return
     }
 
-    await fse.move(file.path, `${filePath}`);
+    if (!fse.existsSync(chunkDir)) {
+      await fse.mkdirs(chunkDir);
+    }
+
+    await fse.move(chunk.path, `${filePath}`);
     res.end("接收文件成功");
   });
 }

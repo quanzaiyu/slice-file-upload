@@ -20,10 +20,13 @@
       el: '#app',
       data() {
         return {
+          sliceSize: 1024 * 1024, // 切片大小
           container: {
             file: null, // 需要上传的文件
             filename: '', // 文件名
-          }
+            length: 1, // 切片数
+          },
+          data: [], // 切片数据
         }
       },
       methods: {
@@ -31,19 +34,49 @@
           const [file] = e.target.files // 取出文件列表的第一个
           this.container.file = file
           this.container.filename = file.name
+          this.container.length = Math.ceil(this.container.file.size / this.sliceSize) // 每1MB一份
         },
-        handleUpload() {
+        async handleUpload() {
           if (!this.container.file) {
             alert('请选择文件')
             return
           }
-          let formData = new FormData()
-          formData.append('file', this.container.file)
-          formData.append('filename', this.container.filename)
-          this.request({
-            url: 'http://localhost:3000/upload',
-            data: formData
-          })
+          const fileChunkList = this.createFileChunk(this.container.file);
+
+          // 装入切片数据
+          this.data = fileChunkList.map(({ file }, index) => ({
+            filename: this.container.filename,
+            chunkName: this.container.filename + "-" + index, // 切片文件hash
+            chunk: file,
+            index,
+          }));
+
+          await this.uploadChunks();
+        },
+        // 生成文件切片
+        createFileChunk(file) {
+          const fileChunkList = []; // 切片数组
+          let cur = 0; // 当前切片位置
+          while (cur < file.size) {
+            fileChunkList.push({ file: file.slice(cur, cur + this.sliceSize) }); // 装入切片数组
+            cur += this.sliceSize; // 改变当前切片位置
+          }
+          return fileChunkList;
+        },
+        // 上传切片
+        async uploadChunks() {
+          const requestList = this.data
+            .map(async ({ chunk, chunkName, index }) => {
+              const formData = new FormData();
+              formData.append("chunk", chunk);
+              formData.append("chunkName", chunkName);
+              formData.append("filename", this.container.filename);
+              this.request({
+                url: "http://localhost:3000/upload",
+                data: formData
+              })
+            })
+          await Promise.all(requestList);
         },
         // 简单的请求封装
         request({url, method = 'POST', data, headers = {}}) {
