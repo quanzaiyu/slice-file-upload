@@ -81,12 +81,14 @@
               formData.append("chunkhash", chunkhash);
               formData.append("filehash", filehash);
               formData.append("filename", this.container.filename);
-              this.request({
+              return await this.request({
                 url: "http://localhost:3000/upload",
                 data: formData
               })
             })
+
           await Promise.all(requestList);
+          await this.mergeRequest();
         },
         // 生成文件hash（web-worker）
         calculateHash(fileChunkList) {
@@ -100,6 +102,19 @@
                 resolve(hash);
               }
             };
+          });
+        },
+        // 合并请求
+        async mergeRequest() {
+          return await this.request({
+            url: "http://localhost:3000/merge",
+            headers: {
+              "content-type": "application/json"
+            },
+            data: JSON.stringify({
+              filehash: this.container.hash,
+              filename: this.container.filename
+            })
           });
         },
         // 简单的请求封装
