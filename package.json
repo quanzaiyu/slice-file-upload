@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "server": "nodemon --inspect server",
+    "client": "live-server ./client/ --port=9000 "
+  },
+  "dependencies": {
+    "fs-extra": "^8.1.0",
+    "live-server": "^1.2.1",
+    "multiparty": "^4.2.1",
+    "nodemon": "^2.0.2"
+  }
+}

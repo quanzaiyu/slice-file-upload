@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+<body>
+
+  <div id="app">
+    <input type="file" @change="handleFileChange" />
+    <button @click="handleUpload">上传</button>
+  </div>
+
+  <script type="module">
+    import Vue from './libs/vue.esm.browser.min.js'
+
+    const vue = new Vue({
+      el: '#app',
+      data() {
+        return {
+          container: {
+            file: null, // 需要上传的文件
+            filename: '', // 文件名
+          }
+        }
+      },
+      methods: {
+        handleFileChange(e) {
+          const [file] = e.target.files // 取出文件列表的第一个
+          this.container.file = file
+          this.container.filename = file.name
+        },
+        handleUpload() {
+          if (!this.container.file) {
+            return
+          }
+          let formData = new FormData()
+          formData.append('file', this.container.file)
+          formData.append('filename', this.container.filename)
+          this.request({
+            url: 'http://localhost:3000/upload',
+            data: formData
+          })
+        },
+        // 简单的请求封装
+        request({url, method = 'POST', data, headers = {}}) {
+          return new Promise(resolve => {
+            const xhr = new XMLHttpRequest();
+            xhr.open(method, url);
+            Object.keys(headers).forEach(key =>
+              xhr.setRequestHeader(key, headers[key])
+            );
+            xhr.send(data);
+            xhr.onload = e => {
+              resolve({
+                data: e.target.response
+              });
+            };
+          });
+        }
+      }
+    })
+  </script>
+</body>
+</html>
