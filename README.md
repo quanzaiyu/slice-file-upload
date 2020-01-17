@@ -20,3 +20,15 @@
 - 文件秒传
 - 上传进度监控
 - 暂停与恢复上传
+
+## 如何使用
+
+```bash
+$ git clone https://github.com/quanzaiyu/slice-file-upload.git
+$ yarn server # 启动服务端
+$ yarn client # 启动客户端
+```
+
+效果：
+
+![](./imgs/001.png)
