@@ -11,6 +11,25 @@
   <div id="app">
     <input type="file" @change="handleFileChange" />
     <button @click="handleUpload">上传</button>
+    <div v-if="data.length">上传进度：</div>
+    <div v-for="(item, index) in data" style="display: flex">
+      第{{index}}个切片上传进度：
+      <span :style="{
+        width: '100px',
+        height: '10px',
+        display: 'block',
+        background: '#fff',
+        border: '1px solid #000'
+      }">
+        <span :style="{
+          width: item.percentage + 'px',
+          height: '10px',
+          display: 'block',
+          background: '#ccc',
+        }"></span>
+      </span>
+      {{item.percentage}}
+    </div>
   </div>
 
   <script type="module">
@@ -69,6 +88,7 @@
             chunkhash: this.container.hash + "-" + index, // 切片文件hash
             chunk: file,
             index,
+            percentage:0,
           }));
 
           await this.uploadChunks(uploadedList);
@@ -96,7 +116,8 @@
               formData.append("filename", this.container.filename);
               return await this.request({
                 url: "http://localhost:3000/upload",
-                data: formData
+                data: formData,
+                onProgress: this.createProgressHandler(this.data[index]),
               })
             })
           await Promise.all(requestList);
@@ -129,10 +150,16 @@
           });
           return JSON.parse(data);
         },
+        createProgressHandler(item) {
+          return e => {
+            item.percentage = parseInt(String((e.loaded / e.total) * 100));
+          };
+        },
         // 简单的请求封装
-        request({url, method = 'POST', data, headers = {}}) {
+        request({url, method = 'POST', data, headers = {}, onProgress = e => e,}) {
           return new Promise(resolve => {
             const xhr = new XMLHttpRequest();
+            xhr.upload.onprogress = onProgress;
             xhr.open(method, url);
             Object.keys(headers).forEach(key =>
               xhr.setRequestHeader(key, headers[key])
