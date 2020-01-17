@@ -12,6 +12,24 @@
     <input type="file" @change="handleFileChange" />
     <button @click="handleUpload">上传</button>
     <div v-if="data.length">上传进度：</div>
+    <div v-if="uploadPercentage" style="display: flex">
+      整个文件的上传进度：
+      <span :style="{
+        width: '100px',
+        height: '10px',
+        display: 'block',
+        background: '#fff',
+        border: '1px solid #000'
+      }">
+        <span :style="{
+          width: uploadPercentage + 'px',
+          height: '10px',
+          display: 'block',
+          background: '#ccc',
+        }"></span>
+      </span>
+      {{uploadPercentage}}
+    </div>
     <div v-for="(item, index) in data" style="display: flex">
       第{{index}}个切片上传进度：
       <span :style="{
@@ -48,6 +66,17 @@
             worker: null,
           },
           data: [], // 切片数据
+        }
+      },
+      computed: {
+        uploadPercentage() {
+          if (!this.container.file || !this.data.length) {
+            return 0
+          }
+          const loader = this.data
+            .map(item => item.percentage)
+            .reduce((acc, cur) =>  acc + cur) / this.data.length
+          return loader.toFixed(2)
         }
       },
       methods: {
