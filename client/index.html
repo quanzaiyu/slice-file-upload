@@ -10,7 +10,9 @@
 
   <div id="app">
     <input type="file" @change="handleFileChange" />
-    <button @click="handleUpload">上传</button>
+    <button @click="handleUpload" :disabled="status !== 0">上传</button>
+    <button @click="handlePause" :disabled="status !== 1">暂停</button>
+    <button @click="handleResume" :disabled="status !== 2">恢复</button>
     <div v-if="data.length">上传进度：</div>
     <div v-if="uploadPercentage" style="display: flex">
       整个文件的上传进度：
@@ -57,6 +59,8 @@
       el: '#app',
       data() {
         return {
+          status: 0, // 0 未上传或上传完成 1 上传中 2 暂停
+          requestList: [],
           sliceSize: 1024 * 1024, // 切片大小
           container: {
             file: null, // 需要上传的文件
@@ -122,6 +126,23 @@
 
           await this.uploadChunks(uploadedList);
         },
+        // 暂停上传
+        handlePause() {
+          this.requestList.forEach(xhr => xhr.abort())
+          this.requestList = []
+          this.status = 2
+        },
+        // 恢复上传
+        async handleResume() {
+          if (this.status !== 2) {
+            return
+          }
+          const { uploadedList } = await this.verifyUpload(
+            this.container.filename,
+            this.container.hash
+          );
+          await this.uploadChunks(uploadedList);
+        },
         // 生成文件切片
         createFileChunk(file) {
           const fileChunkList = []; // 切片数组
@@ -149,7 +170,9 @@
                 onProgress: this.createProgressHandler(this.data[index]),
               })
             })
+          this.status = 1
           await Promise.all(requestList);
+          this.status = 0
         },
         // 生成文件hash（web-worker）
         calculateHash(fileChunkList) {
@@ -185,7 +208,7 @@
           };
         },
         // 简单的请求封装
-        request({url, method = 'POST', data, headers = {}, onProgress = e => e,}) {
+        request({url, method = 'POST', data, headers = {}, onProgress = e => e}) {
           return new Promise(resolve => {
             const xhr = new XMLHttpRequest();
             xhr.upload.onprogress = onProgress;
@@ -195,10 +218,18 @@
             );
             xhr.send(data);
             xhr.onload = e => {
+              // 将请求成功的 xhr 从列表中删除
+              if (this.requestList) {
+                const xhrIndex = this.requestList.findIndex(item => item === xhr);
+                this.requestList.splice(xhrIndex, 1);
+                console.log(this.requestList)
+              }
               resolve({
                 data: e.target.response
               });
             };
+            // 暴露当前 xhr 给外部
+            this.requestList.push(xhr);
           });
         }
       }
