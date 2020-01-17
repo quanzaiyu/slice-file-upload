@@ -25,6 +25,9 @@
 
 ```bash
 $ git clone https://github.com/quanzaiyu/slice-file-upload.git
+$ cd slice-file-upload
+$ yarn
+
 $ yarn server # 启动服务端
 $ yarn client # 启动客户端
 ```
